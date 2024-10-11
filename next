@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+from math import exp
+from tasklib import TaskWarrior
+import subprocess
+import time
+from datetime import timedelta
+from sys import argv
+
+# Obtém tarefas desbloqueadas com os filtros
+tw = TaskWarrior()
+filterString = ' '.join(argv[1:])
+tasks = tw.tasks.filter('+UNBLOCKED').filter(filterString).pending()
+
+if len(tasks) <= 0:
+    print("Taskless")
+    subprocess.run(["task", "ls", filterString])
+    quit()
+
+# Calcula shares
+virtualTime = {}
+tDict = {}
+for task in tasks:
+    tDict[task['id']] = task
+    virtualTime[task['id']] = exp(task['urgency'])
+total = sum(virtualTime.values())
+shares = {tid: virtualTime[tid]/total for tid in virtualTime}
+
+# Calcula executedShares
+tids = virtualTime.keys()
+executedTime = {}
+for tid in tids:
+    task = tDict[tid]
+
+    summary = subprocess.check_output(
+            ['timew', 'summary', task['description']] +
+            ([task['project']] if task['project'] else []) +
+            [tag for tag in task['tags']]
+            ).splitlines()
+
+    if len(summary) > 2:
+        t = time.strptime(summary[-2].decode("utf-8").strip(), "%H:%M:%S")
+        executedTime[tid] = timedelta(hours=t.tm_hour, minutes=t.tm_min,
+                                      seconds=t.tm_sec).total_seconds()
+
+    else:
+        executedTime[tid] = timedelta().total_seconds()
+
+totalExecutedTime = sum(executedTime.values())
+executedShares = {tid: executedTime[tid]/totalExecutedTime if
+                  totalExecutedTime > 0 else 0 for
+                  tid in virtualTime}
+
+# Retorna next, se o tempo total for inferior a 25min
+if totalExecutedTime < 25*60:
+    print("Little sampled time (", int(totalExecutedTime/60), "min)", sep='')
+    subprocess.run(["task", "next", filterString, "limit:1"])
+    quit()
+
+# Organiza tids por diferenças
+difference = {}
+for tid in tids:
+    difference[tid] = shares[tid]-executedShares[tid]
+tids = sorted(difference, key=difference.get, reverse=True)
+
+# Calcula tempo necessário até a próxima mudança
+#proximaMudanca = totalExecutedTime*(
+#        difference[tids[0]] - difference[tids[1]]
+#        )/(
+#        shares[tids[0]] - shares[tids[1]]
+#        )
+
+# Processa a maior diferença
+tid = tids[0]
+print("Necessário: ", int(shares[tid]*10000)/100, "%", sep='')
+print(
+        "Executado: ",
+        int(executedShares[tid]*10000)/100,
+        "% (", timedelta(seconds=executedTime[tid]), ")",
+        sep='')
+#print("Próxima mudança estimada:", timedelta(seconds=int(proximaMudanca)))
+subprocess.run(["task", "ls", str(tid)])
