@@ -131,7 +131,6 @@ tidTuple = sorted(difference, key=difference.get, reverse=True)
 # Processa a maior diferença
 tag = tidTuple[0][0]
 tid = tidTuple[0][1]
-print("Dando preferência a tarefas de", tag)
 print("Necessário: ", 
       int(combinedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
       int(sharesTag[tag]*10000)/100, "% (", tag, ")",
@@ -139,7 +138,6 @@ print("Necessário: ",
 print("Executado:  ",
       int(combinedExecutedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
       int(executedSharesTag[tag]*10000)/100, "% (", tag, ")",
-      " - ", timedelta(seconds=executedTime[tid]),
       sep='')
 
 subprocess.run(["task", "ls", str(tid)])
