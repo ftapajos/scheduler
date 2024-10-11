@@ -6,6 +6,7 @@ import subprocess
 import time
 from datetime import timedelta
 from sys import argv
+import itertools
 
 
 def extract_tags_from(task):
@@ -98,8 +99,12 @@ executedTime = {tid: get_duration_on(
 
 executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
+totalTimeTags = sum(executedTimeTag.values())
+for _tup in itertools.combinations(tags, 2):
+    totalTimeTags -= get_duration_on(list(_tup))
+
 # Retorna next, se o tempo total for inferior a 25min
-if sum(executedTimeTag.values()) < 25*60:
+if totalTimeTags < 25*60:
     print("Little sampled time (",
           int(sum(executedTime.values())/60), "min)", sep='')
     subprocess.run(["task", "next", filterString, "limit:1"])
@@ -112,7 +117,7 @@ totalExecutedTime = sum(executedTime.values())
 # Calcula virtual time de cada tag
 virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
 sharesTag, executedSharesTag = get_shares(
-        executedTimeTag, virtualTimeTag, totalExecutedTime, totalVirtualTime
+        executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
         )
 
 # Organiza por diferenças
