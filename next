@@ -55,21 +55,21 @@ def get_duration_on(tags):
         return timedelta().total_seconds()
 
 
-def get_shares(executedTime, virtualTime):
+def get_shares(executedTime, virtualTime,
+               totalExecutedTime, totalVirtualTime):
     assert len(executedTime) == len(virtualTime)
     assert executedTime.keys() == virtualTime.keys()
 
     keys = executedTime.keys()
     # Calcula executed shares
-    totalExecutedTime = sum(executedTime.values())
     executedShares = {key: executedTime[key]/totalExecutedTime
                       if totalExecutedTime > 0 else 0
                       for key in keys}
 
     # Calcula shares
-    totalVirtualTime = sum(virtualTime.values())
     shares = {key: virtualTime[key]/totalVirtualTime for key in keys}
     return (shares, executedShares)
+
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
@@ -105,12 +105,20 @@ if sum(executedTimeTag.values()) < 25*60:
     subprocess.run(["task", "next", filterString, "limit:1"])
     quit()
 
+# Calcula tempos totais
+totalVirtualTime = sum(virtualTime.values())
+totalExecutedTime = sum(executedTime.values())
+
 # Calcula virtual time de cada tag
 virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
-sharesTag, executedSharesTag = get_shares(executedTimeTag, virtualTimeTag)
+sharesTag, executedSharesTag = get_shares(
+        executedTimeTag, virtualTimeTag, totalExecutedTime, totalVirtualTime
+        )
 
 # Organiza por diferenças
-shares, executedShares = get_shares(executedTime, virtualTime)
+shares, executedShares = get_shares(
+        executedTime, virtualTime, totalExecutedTime, totalVirtualTime
+        )
 
 combinedShares = {}
 combinedExecutedShares = {}
@@ -131,7 +139,7 @@ tidTuple = sorted(difference, key=difference.get, reverse=True)
 # Processa a maior diferença
 tag = tidTuple[0][0]
 tid = tidTuple[0][1]
-print("Necessário: ", 
+print("Necessário: ",
       int(combinedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
       int(sharesTag[tag]*10000)/100, "% (", tag, ")",
       sep='')
