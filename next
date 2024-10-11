@@ -7,6 +7,83 @@ import time
 from datetime import timedelta
 from sys import argv
 
+
+def extract_tags_from(task):
+    tags = []
+
+    # Extract attributes for use as tags.
+    if task['project'] is not None:
+        tags.append(task['project'])
+
+    if task['tags'] is not None:
+        if type(task['tags']) is str:
+            # Usage of tasklib (e.g. in taskpirate) converts the tag list into 
+            # a string
+            # If this is the case, convert it back into a list first
+            # See https://github.com/tbabej/taskpirate/issues/11
+            tags.extend(task['tags'].split(','))
+        else:
+            tags.extend(task['tags'])
+    
+    if len(tags) == 0:
+        tags.append('TAGLESSTASK')
+    return tags
+
+
+def calculate_tag_sum(tags, taskDictionary, dictionary):
+    tagSum = {}
+    tids = taskDictionary.keys()
+    for tag in tags:
+        tagSum[tag] = sum([
+            dictionary[tid] for tid in tids
+            if tag in extract_tags_from(tDict[tid])
+            ])
+    return tagSum
+
+
+def get_duration_on(tags):
+    summary = subprocess.check_output(
+            ['timew', 'summary'] + tags
+            ).splitlines()
+
+    if len(summary) > 2:
+        t = time.strptime(summary[-2].decode("utf-8").strip(), "%H:%M:%S")
+        return timedelta(hours=t.tm_hour, minutes=t.tm_min,
+                         seconds=t.tm_sec).total_seconds()
+
+    else:
+        return timedelta().total_seconds()
+
+
+def order_keys_for_diference(executedTime, virtualTime):
+    assert len(executedTime) == len(virtualTime)
+    assert executedTime.keys() == virtualTime.keys()
+
+    keys = executedTime.keys()
+    # Calcula executed shares
+    totalExecutedTime = sum(executedTime.values())
+    executedShares = {key: executedTime[key]/totalExecutedTime
+                      if totalExecutedTime > 0 else 0
+                      for key in keys}
+
+    # Calcula shares
+    totalVirtualTime = sum(virtualTime.values())
+    shares = {key: virtualTime[key]/totalVirtualTime for key in keys}
+
+    # Organiza por diferenças
+    difference = {key: shares[key]-executedShares[key] for key in keys}
+    return (shares, executedShares, sorted(difference, key=difference.get,
+                                           reverse=True))
+
+
+def print_strings(share, executedShare, executedTime):
+    print("Necessário: ", int(share*10000)/100, "%", sep='')
+    print("Executado: ",
+          int(executedShare*10000)/100,
+          "% (", timedelta(seconds=executedTime), ")",
+          sep='')
+
+
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
 filterString = ' '.join(argv[1:])
@@ -17,66 +94,54 @@ if len(tasks) <= 0:
     subprocess.run(["task", "ls", filterString])
     quit()
 
-# Calcula shares
+# Obtém todas as tags
+tags = set([tag for task in tasks for tag in extract_tags_from(task)])
+
+# Calcula virtual times
 virtualTime = {}
 tDict = {}
 for task in tasks:
     tDict[task['id']] = task
     virtualTime[task['id']] = exp(task['urgency'])
-total = sum(virtualTime.values())
-shares = {tid: virtualTime[tid]/total for tid in virtualTime}
 
-# Calcula executedShares
-tids = virtualTime.keys()
-executedTime = {}
-for tid in tids:
-    task = tDict[tid]
+# Calcula executedTime por task
+executedTime = {tid: get_duration_on(
+            [tDict[tid]['description']] + extract_tags_from(tDict[tid])
+            ) for tid in virtualTime.keys()}
 
-    summary = subprocess.check_output(
-            ['timew', 'summary', task['description']] +
-            ([task['project']] if task['project'] else []) +
-            [tag for tag in task['tags']]
-            ).splitlines()
-
-    if len(summary) > 2:
-        t = time.strptime(summary[-2].decode("utf-8").strip(), "%H:%M:%S")
-        executedTime[tid] = timedelta(hours=t.tm_hour, minutes=t.tm_min,
-                                      seconds=t.tm_sec).total_seconds()
-
-    else:
-        executedTime[tid] = timedelta().total_seconds()
-
-totalExecutedTime = sum(executedTime.values())
-executedShares = {tid: executedTime[tid]/totalExecutedTime if
-                  totalExecutedTime > 0 else 0 for
-                  tid in virtualTime}
+executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
 # Retorna next, se o tempo total for inferior a 25min
-if totalExecutedTime < 25*60:
-    print("Little sampled time (", int(totalExecutedTime/60), "min)", sep='')
+if sum(executedTime.values()) < 25*60:
+    print("Little sampled time (",
+          int(sum(executedTime.values())/60), "min)", sep='')
     subprocess.run(["task", "next", filterString, "limit:1"])
     quit()
 
-# Organiza tids por diferenças
-difference = {}
-for tid in tids:
-    difference[tid] = shares[tid]-executedShares[tid]
-tids = sorted(difference, key=difference.get, reverse=True)
+# Calcula virtual time de cada tag
+virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
+sharesTag, executedSharesTag, tags = order_keys_for_diference(
+        executedTimeTag, virtualTimeTag)
 
-# Calcula tempo necessário até a próxima mudança
-#proximaMudanca = totalExecutedTime*(
-#        difference[tids[0]] - difference[tids[1]]
-#        )/(
-#        shares[tids[0]] - shares[tids[1]]
-#        )
+tag = tags[0]
+print("Restringindo filtro apenas para", tag)
+print_strings(sharesTag[tag], executedSharesTag[tag], executedTimeTag[tag])
+
+# Filtra para tag
+executedTime = {
+        tid: executedTime[tid] for tid in executedTime.keys()
+        if tag in extract_tags_from(tDict[tid])
+        }
+virtualTime = {
+        tid: virtualTime[tid] for tid in executedTime.keys()
+        }
+
+# Organiza por diferenças
+shares, executedShares, tids = order_keys_for_diference(
+        executedTime, virtualTime)
 
 # Processa a maior diferença
 tid = tids[0]
-print("Necessário: ", int(shares[tid]*10000)/100, "%", sep='')
-print(
-        "Executado: ",
-        int(executedShares[tid]*10000)/100,
-        "% (", timedelta(seconds=executedTime[tid]), ")",
-        sep='')
-#print("Próxima mudança estimada:", timedelta(seconds=int(proximaMudanca)))
+print_strings(shares[tid]*sharesTag[tag],
+              executedShares[tid]*executedSharesTag[tag], executedTime[tid])
 subprocess.run(["task", "ls", str(tid)])
