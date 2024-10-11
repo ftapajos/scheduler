@@ -55,7 +55,7 @@ def get_duration_on(tags):
         return timedelta().total_seconds()
 
 
-def order_keys_for_diference(executedTime, virtualTime):
+def get_shares(executedTime, virtualTime):
     assert len(executedTime) == len(virtualTime)
     assert executedTime.keys() == virtualTime.keys()
 
@@ -69,20 +69,7 @@ def order_keys_for_diference(executedTime, virtualTime):
     # Calcula shares
     totalVirtualTime = sum(virtualTime.values())
     shares = {key: virtualTime[key]/totalVirtualTime for key in keys}
-
-    # Organiza por diferenças
-    difference = {key: shares[key]-executedShares[key] for key in keys}
-    return (shares, executedShares, sorted(difference, key=difference.get,
-                                           reverse=True))
-
-
-def print_strings(share, executedShare, executedTime):
-    print("Necessário: ", int(share*10000)/100, "%", sep='')
-    print("Executado: ",
-          int(executedShare*10000)/100,
-          "% (", timedelta(seconds=executedTime), ")",
-          sep='')
-
+    return (shares, executedShares)
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
@@ -120,28 +107,39 @@ if sum(executedTime.values()) < 25*60:
 
 # Calcula virtual time de cada tag
 virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
-sharesTag, executedSharesTag, tags = order_keys_for_diference(
-        executedTimeTag, virtualTimeTag)
-
-tag = tags[0]
-print("Restringindo filtro apenas para", tag)
-print_strings(sharesTag[tag], executedSharesTag[tag], executedTimeTag[tag])
-
-# Filtra para tag
-executedTime = {
-        tid: executedTime[tid] for tid in executedTime.keys()
-        if tag in extract_tags_from(tDict[tid])
-        }
-virtualTime = {
-        tid: virtualTime[tid] for tid in executedTime.keys()
-        }
+sharesTag, executedSharesTag = get_shares(executedTimeTag, virtualTimeTag)
 
 # Organiza por diferenças
-shares, executedShares, tids = order_keys_for_diference(
-        executedTime, virtualTime)
+shares, executedShares = get_shares(executedTime, virtualTime)
+
+combinedShares = {}
+combinedExecutedShares = {}
+tids = tDict.keys()
+for tag in tags:
+    for tid in tids:
+        if tag in extract_tags_from(tDict[tid]):
+            combinedShares[(tag, tid)] = shares[tid] * sharesTag[tag]
+            combinedExecutedShares[(tag, tid)] =\
+                executedShares[tid] * executedSharesTag[tag]
+
+difference = {
+        key: combinedShares[key]-combinedExecutedShares[key]
+        for key in combinedShares.keys()
+        }
+tidTuple = sorted(difference, key=difference.get, reverse=True)
 
 # Processa a maior diferença
-tid = tids[0]
-print_strings(shares[tid]*sharesTag[tag],
-              executedShares[tid]*executedSharesTag[tag], executedTime[tid])
+tag = tidTuple[0][0]
+tid = tidTuple[0][1]
+print("Dando preferência a tarefas de", tag)
+print("Necessário: ", 
+      int(combinedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
+      int(sharesTag[tag]*10000)/100, "% (", tag, ")",
+      sep='')
+print("Executado:  ",
+      int(combinedExecutedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
+      int(executedSharesTag[tag]*10000)/100, "% (", tag, ")",
+      " - ", timedelta(seconds=executedTime[tid]),
+      sep='')
+
 subprocess.run(["task", "ls", str(tid)])
