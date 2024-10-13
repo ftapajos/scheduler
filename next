@@ -110,9 +110,7 @@ if totalTimeTags < 25*60:
     subprocess.run(["task", "next", filterString, "limit:1"])
     quit()
 
-# Calcula tempos totais
 totalVirtualTime = sum(virtualTime.values())
-totalExecutedTime = sum(executedTime.values())
 
 # Calcula virtual time de cada tag
 virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
@@ -120,37 +118,34 @@ sharesTag, executedSharesTag = get_shares(
         executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
         )
 
+# Calcula tempos totais
+tids = tDict.keys()
+correctedExecutedTime = {}
+for tid in tids:
+    correctedExecutedTime[tid] = (executedTime[tid]+1)
+    for tag in extract_tags_from(tDict[tid]):
+        correctedExecutedTime[tid] *= executedSharesTag[tag]/sharesTag[tag]
+
+totalExecutedTime = sum(correctedExecutedTime.values())
+
 # Organiza por diferenças
 shares, executedShares = get_shares(
         executedTime, virtualTime, totalExecutedTime, totalVirtualTime
         )
 
-combinedShares = {}
-combinedExecutedShares = {}
-tids = tDict.keys()
-for tag in tags:
-    for tid in tids:
-        if tag in extract_tags_from(tDict[tid]):
-            combinedShares[(tag, tid)] = shares[tid] * sharesTag[tag]
-            combinedExecutedShares[(tag, tid)] =\
-                executedShares[tid] * executedSharesTag[tag]
-
 difference = {
-        key: combinedShares[key]-combinedExecutedShares[key]
-        for key in combinedShares.keys()
+        key: shares[key]-executedShares[key]
+        for key in shares.keys()
         }
-tidTuple = sorted(difference, key=difference.get, reverse=True)
 
-# Processa a maior diferença
-tag = tidTuple[0][0]
-tid = tidTuple[0][1]
+tids = sorted(difference, key=difference.get, reverse=True)
+tid = tids[0]
 print("Necessário: ",
-      int(combinedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
-      int(sharesTag[tag]*10000)/100, "% (", tag, ")",
+      int(shares[tid]*10000)/100, "% (tarefa), ",
       sep='')
 print("Executado:  ",
-      int(combinedExecutedShares[tidTuple[0]]*10000)/100, "% (tarefa), ",
-      int(executedSharesTag[tag]*10000)/100, "% (", tag, ")",
+      int(correctedExecutedTime[tid]*10000)/100, "% (corrigido), ",
+      int(executedShares[tid]*10000)/100, "% (tarefa), ",
       sep='')
 
 subprocess.run(["task", "ls", str(tid)])
