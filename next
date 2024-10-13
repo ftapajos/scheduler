@@ -130,7 +130,7 @@ totalExecutedTime = sum(correctedExecutedTime.values())
 
 # Organiza por diferenças
 shares, executedShares = get_shares(
-        executedTime, virtualTime, totalExecutedTime, totalVirtualTime
+        correctedExecutedTime, virtualTime, totalExecutedTime, totalVirtualTime
         )
 
 difference = {
@@ -141,11 +141,11 @@ difference = {
 tids = sorted(difference, key=difference.get, reverse=True)
 tid = tids[0]
 print("Necessário: ",
-      int(shares[tid]*10000)/100, "% (tarefa), ",
+      int(shares[tid]*10000)/100, "%",
       sep='')
 print("Executado:  ",
-      int(correctedExecutedTime[tid]*10000)/100, "% (corrigido), ",
-      int(executedShares[tid]*10000)/100, "% (tarefa), ",
+      int(executedShares[tid]*10000)/100, "% (corrigido), ",
+      int(executedTime[tid]*10000)/100/sum(executedTime.values()), "% (executado), ",
       sep='')
 
 subprocess.run(["task", "ls", str(tid)])
