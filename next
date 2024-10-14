@@ -147,7 +147,7 @@ print("Necessário: ",
       sep='')
 print("Executado:  ",
       int(executedShares[tid]*10000)/100, "% (corrigido), ",
-      int(executedTime[tid]*10000)/100/totalExecutedTime
+      int(executedTime[tid]*10000/totalExecutedTime)/100
       if totalExecutedTime > 0 else 0, "% (executado), ",
       sep='')
 
