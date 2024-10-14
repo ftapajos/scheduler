@@ -8,7 +8,7 @@ from datetime import timedelta
 from sys import argv
 import itertools
 
-debug = False
+debug = ("./" in argv[0])
 
 
 def extract_tags_from(task):
