@@ -130,17 +130,16 @@ for tag in sharesTag.keys():
 
 # Calcula tempos totais
 tids = tDict.keys()
-correctedExecutedTime = {}
 for tid in tids:
-    correctedExecutedTime[tid] = (executedTime[tid]+1)
     for tag in extract_tags_from(tDict[tid]):
-        correctedExecutedTime[tid] *= tag_correction[tag]
+        virtualTime[tid] /= (1+tag_correction[tag])
 
-totalCorectedTime = sum(correctedExecutedTime.values())
+totalVirtualTime = sum(virtualTime.values())
+
 
 # Organiza por diferenças
 shares, executedShares = get_shares(
-        correctedExecutedTime, virtualTime, totalCorectedTime, totalVirtualTime
+        executedTime, virtualTime, totalExecutedTime, totalVirtualTime
         )
 
 difference = {
@@ -160,9 +159,8 @@ print("Necessário: ",
       int(shares[tid]*10000)/100, "%",
       sep='')
 print("Executado:  ",
-      int(executedShares[tid]*10000)/100, "% (corrigido), ",
       int(executedTime[tid]*10000/totalExecutedTime)/100
-      if totalExecutedTime > 0 else 0, "% (executado), ",
+      if totalExecutedTime > 0 else 0, "%",
       sep='')
 
 subprocess.run(["task", "ls", str(tid)])
