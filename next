@@ -8,6 +8,8 @@ from datetime import timedelta
 from sys import argv
 import itertools
 
+debug = False
+
 
 def extract_tags_from(task):
     tags = []
@@ -120,13 +122,19 @@ sharesTag, executedSharesTag = get_shares(
 
 totalExecutedTime = sum(executedTime.values())
 
+tag_correction = {}
+for tag in sharesTag.keys():
+    tag_correction[tag] = executedSharesTag[tag]/sharesTag[tag]
+    if debug:
+        print(tag, tag_correction[tag])
+
 # Calcula tempos totais
 tids = tDict.keys()
 correctedExecutedTime = {}
 for tid in tids:
     correctedExecutedTime[tid] = (executedTime[tid]+1)
     for tag in extract_tags_from(tDict[tid]):
-        correctedExecutedTime[tid] *= executedSharesTag[tag]/sharesTag[tag]
+        correctedExecutedTime[tid] *= tag_correction[tag]
 
 totalCorectedTime = sum(correctedExecutedTime.values())
 
@@ -139,6 +147,12 @@ difference = {
         key: shares[key]-executedShares[key]
         for key in shares.keys()
         }
+
+if debug:
+    for tid in sorted(difference, key=difference.get, reverse=True):
+        print(int(100*shares[tid]), int(100*executedShares[tid]),
+              int(executedTime[tid]*100/totalExecutedTime),
+              int(100*difference[tid]), tDict[tid])
 
 tid = max(difference, key=difference.get)
 
