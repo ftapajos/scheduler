@@ -139,7 +139,7 @@ for tag in sharesTag.keys():
 tids = tDict.keys()
 for tid in tids:
     for tag in extract_tags_from(tDict[tid]):
-        virtualTime[tid] /= (1+tag_correction[tag])
+        virtualTime[tid] /= (tag_correction[tag] if tag_correction[tag] != 0 else 1)
 
 totalVirtualTime = sum(virtualTime.values())
 
