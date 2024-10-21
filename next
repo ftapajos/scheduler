@@ -50,6 +50,9 @@ def get_duration_on(tags):
     if tagless in tags:
         tags.remove(tagless)
 
+    if len(tags) <= 0:
+        return 0
+
     summary = subprocess.check_output(
             ['timew', 'summary'] + tags
             ).splitlines()
@@ -133,7 +136,7 @@ tag_correction = {}
 for tag in sharesTag.keys():
     tag_correction[tag] = executedSharesTag[tag]/sharesTag[tag]
     if debug:
-        print(tag, tag_correction[tag])
+        print(tag, executedSharesTag[tag], sharesTag[tag], tag_correction[tag])
 
 # Calcula tempos totais
 tids = tDict.keys()
