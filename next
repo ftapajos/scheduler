@@ -4,9 +4,10 @@ from math import exp
 from tasklib import TaskWarrior
 import subprocess
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from sys import argv
 import itertools
+import json
 
 debug = ("./" in argv[0])
 
@@ -44,6 +45,20 @@ def calculate_tag_sum(tags, taskDictionary, dictionary):
             if tag in extract_tags_from(tDict[tid])
             ])
     return tagSum
+
+
+def get_total_time_tags(tags):
+    day = json.loads(subprocess.check_output(
+            ['timew', 'export', ':day']
+            ))
+
+    total_time = 0
+    for event in day:
+        if set(tags).intersection(set(event['tags'])):
+            start = datetime.strptime(event['start'], "%Y%m%dT%H%M%SZ")
+            end = datetime.strptime(event['end'], "%Y%m%dT%H%M%SZ")
+            total_time += (end-start).total_seconds()
+    return total_time
 
 
 def get_duration_on(tags):
@@ -109,11 +124,7 @@ executedTime = {tid: get_duration_on(
 
 executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
-totalTimeTags = sum(executedTimeTag.values())
-for _tup in itertools.combinations([tag for tag in tags if tag != tagless], 2):
-    if debug:
-        print(_tup, totalTimeTags)
-    totalTimeTags -= get_duration_on(list(_tup))
+totalTimeTags = get_total_time_tags(executedTimeTag.keys())
 
 # Retorna next, se o tempo total for inferior a 25min
 if totalTimeTags < 25*60:
