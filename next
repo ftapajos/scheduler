@@ -4,7 +4,7 @@ from math import exp
 from tasklib import TaskWarrior
 import subprocess
 import time
-from datetime import timedelta, datetime, UTC
+from datetime import timedelta, datetime, UTC, timezone
 from sys import argv
 import itertools
 import json
@@ -55,9 +55,13 @@ def get_total_time_tags(tags):
     total_time = 0
     for event in day:
         if set(tags).intersection(set(event['tags'])):
-            start = datetime.strptime(event['start'], "%Y%m%dT%H%M%SZ")
+            start = datetime.strptime(
+                    event['start'], "%Y%m%dT%H%M%SZ"
+                    ).replace(tzinfo=timezone.utc)
             if 'end' in event:
-                end = datetime.strptime(event['end'], "%Y%m%dT%H%M%SZ")
+                end = datetime.strptime(
+                        event['end'], "%Y%m%dT%H%M%SZ"
+                        ).replace(tzinfo=timezone.utc)
             else:
                 end = datetime.now(UTC)
             total_time += (end-start).total_seconds()
