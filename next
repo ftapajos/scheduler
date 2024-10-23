@@ -106,8 +106,8 @@ def get_shares(executedTime, virtualTime,
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
-filterString = ' '.join(argv[1:])
-tasks = tw.tasks.filter('+UNBLOCKED').filter(filterString).pending()
+filterString = ' '.join(argv[1:]) + " +UNBLOCKED"
+tasks = tw.tasks.filter(filterString).pending()
 
 if len(tasks) <= 0:
     print("Taskless")
