@@ -106,7 +106,7 @@ def get_shares(executedTime, virtualTime,
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
-filterString = ' '.join(argv[1:]) + " +UNBLOCKED"
+filterString = "(" + ' '.join(argv[1:]) + ") +UNBLOCKED"
 tasks = tw.tasks.filter(filterString).pending()
 
 if len(tasks) <= 0:
@@ -178,7 +178,7 @@ difference = {
 if debug:
     for tid in sorted(difference, key=difference.get, reverse=True):
         print(int(100*shares[tid]), int(100*executedShares[tid]),
-              int(executedTime[tid]*100/totalExecutedTime),
+#              int(executedTime[tid]*100/totalExecutedTime if totalExecutedTime >0 \N),
               int(100*difference[tid]), tDict[tid])
 
 tid = max(difference, key=difference.get)
