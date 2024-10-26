@@ -6,12 +6,12 @@ import subprocess
 import time
 from datetime import timedelta, datetime, UTC, timezone
 from sys import argv
-import itertools
 import json
 
 debug = ("./" in argv[0])
 
 tagless = 'TAGLESSTASK'
+switching_time_minutes = 25
 
 
 def extract_tags_from(task):
@@ -47,6 +47,19 @@ def calculate_tag_sum(tags, taskDictionary, dictionary):
     return tagSum
 
 
+def get_time_tw(event):
+    start = datetime.strptime(
+            event['start'], "%Y%m%dT%H%M%SZ"
+            ).replace(tzinfo=timezone.utc)
+    if 'end' in event:
+        end = datetime.strptime(
+                event['end'], "%Y%m%dT%H%M%SZ"
+                ).replace(tzinfo=timezone.utc)
+    else:
+        end = datetime.now(UTC)
+    return (end-start).total_seconds()
+
+
 def get_total_time_tags(tags):
     day = json.loads(subprocess.check_output(
             ['timew', 'export', ':day']
@@ -55,17 +68,20 @@ def get_total_time_tags(tags):
     total_time = 0
     for event in day:
         if set(tags).intersection(set(event['tags'])):
-            start = datetime.strptime(
-                    event['start'], "%Y%m%dT%H%M%SZ"
-                    ).replace(tzinfo=timezone.utc)
-            if 'end' in event:
-                end = datetime.strptime(
-                        event['end'], "%Y%m%dT%H%M%SZ"
-                        ).replace(tzinfo=timezone.utc)
-            else:
-                end = datetime.now(UTC)
-            total_time += (end-start).total_seconds()
+            total_time += get_time_tw(event)
     return total_time
+
+
+def last_activity_time(tags):
+    day = json.loads(subprocess.check_output(
+            ['timew', 'export', ':day']
+            ))
+
+    last_activity = [event for event in day if event['id'] == 1][0]
+    if set(tags).intersection(set(last_activity['tags'])):
+        return get_time_tw(last_activity)
+    else:
+        return 0
 
 
 def get_duration_on(tags):
@@ -133,8 +149,8 @@ executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
 totalTimeTags = get_total_time_tags(executedTimeTag.keys())
 
-# Retorna next, se o tempo total for inferior a 25min
-if totalTimeTags < 25*60:
+# Retorna next, se o tempo total for inferior ao switching time
+if totalTimeTags < switching_time_minutes*60:
     print("Little sampled time (",
           int(totalTimeTags/60), "min)", sep='')
     subprocess.run(["task", "next", filterString, "limit:1"])
@@ -170,6 +186,18 @@ shares, executedShares = get_shares(
         executedTime, virtualTime, totalExecutedTime, totalVirtualTime
         )
 
+if (1 in executedShares.values()):
+    tid = list(executedShares.keys())[list(executedShares.values()).index(1)]
+    tags = [tDict[tid]['description']]
+    last_activity_time = last_activity_time(tags)
+    if (last_activity_time < switching_time_minutes*60):
+        print("This is the only pending task started today")
+        print("Please keep doing it for "
+              f"{int(switching_time_minutes-last_activity_time/60)}min uninterruptly")
+        subprocess.run(["task", "ls", str(tid)])
+        quit()
+
+
 difference = {
         key: shares[key]-executedShares[key]
         for key in shares.keys()
@@ -178,7 +206,7 @@ difference = {
 if debug:
     for tid in sorted(difference, key=difference.get, reverse=True):
         print(int(100*shares[tid]), int(100*executedShares[tid]),
-#              int(executedTime[tid]*100/totalExecutedTime if totalExecutedTime >0 \N),
+              int(executedTime[tid]*100/totalExecutedTime),
               int(100*difference[tid]), tDict[tid])
 
 tid = max(difference, key=difference.get)
