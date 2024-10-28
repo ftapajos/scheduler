@@ -136,9 +136,15 @@ tags = set([tag for task in tasks for tag in extract_tags_from(task)])
 # Calcula virtual times
 virtualTime = {}
 tDict = {}
+_tasksTags = []
 for task in tasks:
-    tDict[task['id']] = task
-    virtualTime[task['id']] = exp(task['urgency'])
+    _tags = extract_tags_from(task)
+    _tags.append(task['description'])
+    _tags = set(_tags)
+    if _tags not in _tasksTags:
+        _tasksTags.append(_tags)
+        tDict[task['id']] = task
+        virtualTime[task['id']] = exp(task['urgency'])
 
 # Calcula executedTime por task
 executedTime = {tid: get_duration_on(
