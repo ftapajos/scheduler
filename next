@@ -192,17 +192,25 @@ shares, executedShares = get_shares(
         executedTime, virtualTime, totalExecutedTime, totalVirtualTime
         )
 
+# Trata caso de apenas uma tarefa longa 
+# com mais prioridade do que as curtas
 if (1 in executedShares.values()):
     tid = list(executedShares.keys())[list(executedShares.values()).index(1)]
-    tags = [tDict[tid]['description']]
-    last_activity_time = last_activity_time(tags)
-    if (last_activity_time < switching_time_minutes*60):
-        print("This is the only pending task started today")
-        print("Please keep doing it for "
-              f"{int(switching_time_minutes-last_activity_time/60)}min uninterruptly")
-        subprocess.run(["task", "ls", str(tid)])
-        quit()
 
+    if sorted(tasks, key=lambda d: d['urgency'], reverse=True)[0]['id'] == tid:
+        # Única tarefa feita é a de maior prioridade
+        tags = [tDict[tid]['description']]
+        last_activity_time = last_activity_time(tags)
+
+        if (last_activity_time < switching_time_minutes*60):
+            # Tarefa de maior prioridade não foi feita ininterruptamente
+            # no último intervalo
+            print("This is the only pending task started today")
+            print("Please keep doing it for",
+                  f"{int(switching_time_minutes-last_activity_time/60)}min",
+                  "uninterruptly")
+            subprocess.run(["task", "ls", str(tid)])
+            quit()
 
 difference = {
         key: shares[key]-executedShares[key]
