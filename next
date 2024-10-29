@@ -11,7 +11,8 @@ import json
 debug = ("./" in argv[0])
 
 tagless = 'TAGLESSTASK'
-switching_time_minutes = 25
+force_avoided_task_for_seconds = 25*60
+force_switch_after_seconds = 25*60
 
 
 def extract_tags_from(task):
@@ -78,7 +79,7 @@ def last_activity_time(tags):
             ))
 
     last_activity = [event for event in day if event['id'] == 1][0]
-    if set(tags).intersection(set(last_activity['tags'])):
+    if set(tags).intersection(set(last_activity['tags'])) == tags:
         return get_time_tw(last_activity)
     else:
         return 0
@@ -156,9 +157,9 @@ executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 totalTimeTags = get_total_time_tags(executedTimeTag.keys())
 
 # Retorna next, se o tempo total for inferior ao switching time
-if totalTimeTags < switching_time_minutes*60:
-    print("Little sampled time (",
-          int(totalTimeTags/60), "min)", sep='')
+if totalTimeTags == 0:
+    print("No sampled time")
+    print("Start by the most urgent task")
     subprocess.run(["task", "next", filterString, "limit:1"])
     quit()
 
@@ -202,12 +203,14 @@ if (1 in executedShares.values()):
         tags = [tDict[tid]['description']]
         last_activity_time = last_activity_time(tags)
 
-        if (last_activity_time < switching_time_minutes*60):
+        if (last_activity_time < force_avoided_task_for_seconds):
             # Tarefa de maior prioridade não foi feita ininterruptamente
             # no último intervalo
             print("This is the only pending task started today")
             print("Please keep doing it for",
-                  f"{int(switching_time_minutes-last_activity_time/60)}min",
+                  f"{int((
+                    force_avoided_task_for_seconds-last_activity_time
+                  )/60)}min",
                   "uninterruptly")
             subprocess.run(["task", "ls", str(tid)])
             quit()
@@ -224,6 +227,17 @@ if debug:
               int(100*difference[tid]), tDict[tid])
 
 tid = max(difference, key=difference.get)
+
+# Verifica se já não está há muito tempo nesta tarefa
+last_activity_time = last_activity_time(
+        [tDict[tid]['description']] + extract_tags_from(tDict[tid])
+        )
+if last_activity_time > force_switch_after_seconds:
+    skiped_task = tDict[tid]
+    print("skipping", skiped_task)
+    difference.pop(tid)
+    tid = max(difference, key=difference.get)
+
 
 print("Necessário: ",
       int(shares[tid]*10000)/100, "%",
