@@ -37,6 +37,10 @@ def extract_tags_from(task):
     return tags
 
 
+def tags_and_description(task):
+    return [task['description']] + extract_tags_from(task)
+
+
 def calculate_tag_sum(tags, taskDictionary, dictionary):
     tagSum = {}
     tids = taskDictionary.keys()
@@ -79,7 +83,7 @@ def last_activity_time(tags):
             ))
 
     last_activity = [event for event in day if event['id'] == 1][0]
-    if set(tags).intersection(set(last_activity['tags'])) == tags:
+    if set(tags) == set(last_activity['tags']):
         return get_time_tw(last_activity)
     else:
         return 0
@@ -139,9 +143,7 @@ virtualTime = {}
 tDict = {}
 _tasksTags = []
 for task in tasks:
-    _tags = extract_tags_from(task)
-    _tags.append(task['description'])
-    _tags = set(_tags)
+    _tags = set(tags_and_description(task))
     if _tags not in _tasksTags:
         _tasksTags.append(_tags)
         tDict[task['id']] = task
@@ -149,8 +151,8 @@ for task in tasks:
 
 # Calcula executedTime por task
 executedTime = {tid: get_duration_on(
-            [tDict[tid]['description']] + extract_tags_from(tDict[tid])
-            ) for tid in virtualTime.keys()}
+    tags_and_description(tDict[tid])
+    ) for tid in virtualTime.keys()}
 
 executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
@@ -200,16 +202,16 @@ if (1 in executedShares.values()):
 
     if sorted(tasks, key=lambda d: d['urgency'], reverse=True)[0]['id'] == tid:
         # Única tarefa feita é a de maior prioridade
-        tags = [tDict[tid]['description']]
-        last_activity_time = last_activity_time(tags)
+        tags = tags_and_description(tDict[tid])
+        _last_activity_time = last_activity_time(tags)
 
-        if (last_activity_time < force_avoided_task_for_seconds):
+        if (_last_activity_time < force_avoided_task_for_seconds):
             # Tarefa de maior prioridade não foi feita ininterruptamente
             # no último intervalo
             print("This is the only pending task started today")
             print("Please keep doing it for",
                   f"{int((
-                    force_avoided_task_for_seconds-last_activity_time
+                    force_avoided_task_for_seconds-_last_activity_time
                   )/60)}min",
                   "uninterruptly")
             subprocess.run(["task", "ls", str(tid)])
@@ -229,10 +231,10 @@ if debug:
 tid = max(difference, key=difference.get)
 
 # Verifica se já não está há muito tempo nesta tarefa
-last_activity_time = last_activity_time(
-        [tDict[tid]['description']] + extract_tags_from(tDict[tid])
+_last_activity_time = last_activity_time(
+        tags_and_description(tDict[tid])
         )
-if last_activity_time > force_switch_after_seconds:
+if _last_activity_time > force_switch_after_seconds:
     skiped_task = tDict[tid]
     print("skipping", skiped_task)
     difference.pop(tid)
