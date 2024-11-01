@@ -127,8 +127,23 @@ def get_shares(executedTime, virtualTime,
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
-filterString = "(" + ' '.join(argv[1:]) + ") +UNBLOCKED"
-tasks = tw.tasks.filter(filterString).pending()
+filterString = ' '.join(argv[1:])
+if len(filterString) > 1:
+    filterString = "(" + filterString + ") "
+else:
+    filterString = ""
+filterString += "+UNBLOCKED and +PENDING"
+
+# Aplica o context
+context = tw.execute_command(["_get", "rc.context"])[0]
+
+if context:
+    context_read = tw.execute_command(
+            ["_get", "rc.context." + context + ".read"]
+            )[0]
+    filterString += ' and ( ' + context_read + ')'
+
+tasks = tw.tasks.filter(filterString)
 
 if len(tasks) <= 0:
     print("Taskless")
