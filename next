@@ -96,17 +96,15 @@ def get_duration_on(tags):
     if len(tags) <= 0:
         return 0
 
-    summary = subprocess.check_output(
-            ['timew', 'summary'] + tags
-            ).splitlines()
+    day = json.loads(subprocess.check_output(
+            ['timew', 'export', ':day']
+            ))
 
-    if len(summary) > 2:
-        t = time.strptime(summary[-2].decode("utf-8").strip(), "%H:%M:%S")
-        return timedelta(hours=t.tm_hour, minutes=t.tm_min,
-                         seconds=t.tm_sec).total_seconds()
-
-    else:
-        return timedelta().total_seconds()
+    total_time = 0
+    for event in day:
+        if set(tags) == set(event['tags']):
+            total_time += get_time_tw(event)
+    return total_time
 
 
 def get_shares(executedTime, virtualTime,
