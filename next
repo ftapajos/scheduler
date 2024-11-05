@@ -170,9 +170,10 @@ executedTime = {tid: get_duration_on(
 executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
 totalTimeTags = get_total_time_tags(executedTimeTag.keys())
+totalExecutedTime = sum(executedTime.values())
 
 # Retorna next, se o tempo total for inferior ao switching time
-if totalTimeTags == 0:
+if totalTimeTags == 0 and totalExecutedTime == 0:
     print("No sampled time")
     print("Start by the most urgent task")
     subprocess.run(["task", "next", filterString, "limit:1"])
@@ -186,7 +187,6 @@ sharesTag, executedSharesTag = get_shares(
         executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
         )
 
-totalExecutedTime = sum(executedTime.values())
 
 tag_correction = {}
 for tag in sharesTag.keys():
