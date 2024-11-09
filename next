@@ -101,8 +101,9 @@ def get_duration_on(tags):
             ))
 
     total_time = 0
+    tags = set(tags)
     for event in day:
-        if set(tags) == set(event['tags']):
+        if tags.intersection(set(event['tags'])) == tags:
             total_time += get_time_tw(event)
     return total_time
 
@@ -191,6 +192,7 @@ sharesTag, executedSharesTag = get_shares(
 tag_correction = {}
 for tag in sharesTag.keys():
     tag_correction[tag] = executedSharesTag[tag]/sharesTag[tag]
+    tag_correction[tag] = 1/(tag_correction[tag] if tag_correction[tag] != 0 else 1)
     if debug:
         print(tag, executedSharesTag[tag], sharesTag[tag], tag_correction[tag])
 
@@ -198,7 +200,7 @@ for tag in sharesTag.keys():
 tids = tDict.keys()
 for tid in tids:
     for tag in extract_tags_from(tDict[tid]):
-        virtualTime[tid] /= (tag_correction[tag] if tag_correction[tag] != 0 else 1)
+        virtualTime[tid] *= tag_correction[tag]
 
 totalVirtualTime = sum(virtualTime.values())
 
