@@ -38,7 +38,11 @@ def extract_tags_from(task):
 
 
 def tags_and_description(task):
-    return [task['description']] + extract_tags_from(task)
+    tags = extract_tags_from(task)
+    if len(tags) == 1 and tags[0] == tagless:
+        return [task['description']]
+    else:
+        return [task['description']] + tags
 
 
 def calculate_tag_sum(tags, taskDictionary, dictionary):
