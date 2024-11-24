@@ -160,7 +160,7 @@ tags = set([tag for task in tasks for tag in extract_tags_from(task)])
 virtualTime = {}
 tDict = {}
 _tasksTags = []
-for task in tasks:
+for task in sorted(tasks, key=lambda d: d['urgency'], reverse=True):
     _tags = set(tags_and_description(task))
     if _tags not in _tasksTags:
         _tasksTags.append(_tags)
