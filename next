@@ -195,8 +195,10 @@ sharesTag, executedSharesTag = get_shares(
 
 tag_correction = {}
 for tag in sharesTag.keys():
-    tag_correction[tag] = executedSharesTag[tag]/sharesTag[tag]
-    tag_correction[tag] = 1/(tag_correction[tag] if tag_correction[tag] != 0 else 1)
+    if executedSharesTag[tag] > sharesTag[tag]:
+        tag_correction[tag] = sharesTag[tag]/executedSharesTag[tag]
+    else:
+        tag_correction[tag] = 1
     if debug:
         print(tag, executedSharesTag[tag], sharesTag[tag], tag_correction[tag])
 
