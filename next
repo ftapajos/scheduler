@@ -93,6 +93,21 @@ def last_activity_time(tags):
         return 0
 
 
+def get_tw_id(task):
+    if task["start"] is None:
+        return None
+
+    day = json.loads(subprocess.check_output(["timew", "export"]))
+
+    return min(
+        [
+            d["id"]
+            for d in day
+            if set(d["tags"]) == set(tags_and_description(task))
+        ]
+    )
+
+
 def get_duration_on(tags):
     if tagless in tags:
         tags.remove(tagless)
@@ -181,6 +196,11 @@ totalExecutedTime = sum(executedTime.values())
 if totalTimeTags == 0 and totalExecutedTime == 0:
     print("No sampled time")
     print("Start by the most urgent task")
+    tasks = tw.tasks.filter(filterString)
+    tw_id = get_tw_id(sorted(tasks, key=lambda d: d['urgency'], reverse=True)[0])
+    if tw_id is not None:
+        print(f"Timewarrior id: @{tw_id}")
+
     subprocess.run(["task", "next", filterString, "limit:1"])
     quit()
 
@@ -235,6 +255,10 @@ if (1 in executedShares.values()):
                     force_avoided_task_for_seconds-_last_activity_time
                   )/60)}min",
                   "uninterruptly")
+            tw_id = get_tw_id(tDict[tid])
+            if tw_id is not None:
+                print(f"Timewarrior id: @{tw_id}")
+
             subprocess.run(["task", "ls", str(tid)])
             quit()
 
@@ -269,5 +293,9 @@ print("Executado:  ",
       int(executedTime[tid]*10000/totalExecutedTime)/100
       if totalExecutedTime > 0 else 0, "%",
       sep='')
+
+tw_id = get_tw_id(tDict[tid])
+if tw_id is not None:
+    print(f"Timewarrior id: @{tw_id}")
 
 subprocess.run(["task", "ls", str(tid)])
