@@ -8,30 +8,30 @@ from datetime import timedelta, datetime, UTC, timezone
 from sys import argv
 import json
 
-debug = ("./" in argv[0])
+debug = "./" in argv[0]
 
-tagless = 'TAGLESSTASK'
-force_avoided_task_for_seconds = 25*60
-force_switch_after_seconds = 25*60
+tagless = "TAGLESSTASK"
+force_avoided_task_for_seconds = 25 * 60
+force_switch_after_seconds = 25 * 60
 
 
 def extract_tags_from(task):
     tags = []
 
     # Extract attributes for use as tags.
-    if task['project'] is not None:
-        tags.append(task['project'])
+    if task["project"] is not None:
+        tags.append(task["project"])
 
-    if task['tags'] is not None:
-        if type(task['tags']) is str:
-            # Usage of tasklib (e.g. in taskpirate) converts the tag list into 
+    if task["tags"] is not None:
+        if type(task["tags"]) is str:
+            # Usage of tasklib (e.g. in taskpirate) converts the tag list into
             # a string
             # If this is the case, convert it back into a list first
             # See https://github.com/tbabej/taskpirate/issues/11
-            tags.extend(task['tags'].split(','))
+            tags.extend(task["tags"].split(","))
         else:
-            tags.extend(task['tags'])
-    
+            tags.extend(task["tags"])
+
     if len(tags) == 0:
         tags.append(tagless)
     return tags
@@ -40,54 +40,53 @@ def extract_tags_from(task):
 def tags_and_description(task):
     tags = extract_tags_from(task)
     if len(tags) == 1 and tags[0] == tagless:
-        return [task['description']]
+        return [task["description"]]
     else:
-        return [task['description']] + tags
+        return [task["description"]] + tags
 
 
 def calculate_tag_sum(tags, taskDictionary, dictionary):
     tagSum = {}
     tids = taskDictionary.keys()
     for tag in tags:
-        tagSum[tag] = sum([
-            dictionary[tid] for tid in tids
-            if tag in extract_tags_from(tDict[tid])
-            ])
+        tagSum[tag] = sum(
+            [
+                dictionary[tid]
+                for tid in tids
+                if tag in extract_tags_from(tDict[tid])
+            ]
+        )
     return tagSum
 
 
 def get_time_tw(event):
-    start = datetime.strptime(
-            event['start'], "%Y%m%dT%H%M%SZ"
-            ).replace(tzinfo=timezone.utc)
-    if 'end' in event:
-        end = datetime.strptime(
-                event['end'], "%Y%m%dT%H%M%SZ"
-                ).replace(tzinfo=timezone.utc)
+    start = datetime.strptime(event["start"], "%Y%m%dT%H%M%SZ").replace(
+        tzinfo=timezone.utc
+    )
+    if "end" in event:
+        end = datetime.strptime(event["end"], "%Y%m%dT%H%M%SZ").replace(
+            tzinfo=timezone.utc
+        )
     else:
         end = datetime.now(UTC)
-    return (end-start).total_seconds()
+    return (end - start).total_seconds()
 
 
 def get_total_time_tags(tags):
-    day = json.loads(subprocess.check_output(
-            ['timew', 'export', ':day']
-            ))
+    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
 
     total_time = 0
     for event in day:
-        if set(tags).intersection(set(event['tags'])):
+        if set(tags).intersection(set(event["tags"])):
             total_time += get_time_tw(event)
     return total_time
 
 
 def last_activity_time(tags):
-    day = json.loads(subprocess.check_output(
-            ['timew', 'export', ':day']
-            ))
+    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
 
-    last_activity = [event for event in day if event['id'] == 1][0]
-    if set(tags) == set(last_activity['tags']):
+    last_activity = [event for event in day if event["id"] == 1][0]
+    if set(tags) == set(last_activity["tags"]):
         return get_time_tw(last_activity)
     else:
         return 0
@@ -98,12 +97,12 @@ def print_task(task):
 
     if task["start"] is not None:
         tw_id = min(
-                [
-                    d["id"]
-                    for d in day
-                    if set(d["tags"]) == set(tags_and_description(task))
-                    ]
-                )
+            [
+                d["id"]
+                for d in day
+                if set(d["tags"]) == set(tags_and_description(task))
+            ]
+        )
         print(f"Timewarrior id: @{tw_id}")
 
     subprocess.run(["task", "ls", str(task["id"])])
@@ -116,37 +115,39 @@ def get_duration_on(tags):
     if len(tags) <= 0:
         return 0
 
-    day = json.loads(subprocess.check_output(
-            ['timew', 'export', ':day']
-            ))
+    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
 
     total_time = 0
     tags = set(tags)
     for event in day:
-        if tags.intersection(set(event['tags'])) == tags:
+        if tags.intersection(set(event["tags"])) == tags:
             total_time += get_time_tw(event)
     return total_time
 
 
-def get_shares(executedTime, virtualTime,
-               totalExecutedTime, totalVirtualTime):
+def get_shares(executedTime, virtualTime, totalExecutedTime, totalVirtualTime):
     assert len(executedTime) == len(virtualTime)
     assert executedTime.keys() == virtualTime.keys()
 
     keys = executedTime.keys()
     # Calcula executed shares
-    executedShares = {key: executedTime[key]/totalExecutedTime
-                      if totalExecutedTime > 0 else 0
-                      for key in keys}
+    executedShares = {
+        key: (
+            executedTime[key] / totalExecutedTime
+            if totalExecutedTime > 0
+            else 0
+        )
+        for key in keys
+    }
 
     # Calcula shares
-    shares = {key: virtualTime[key]/totalVirtualTime for key in keys}
+    shares = {key: virtualTime[key] / totalVirtualTime for key in keys}
     return (shares, executedShares)
 
 
 # Obtém tarefas desbloqueadas com os filtros
 tw = TaskWarrior()
-filterString = ' '.join(argv[1:])
+filterString = " ".join(argv[1:])
 if len(filterString) > 1:
     filterString = "(" + filterString + ") "
 else:
@@ -158,9 +159,9 @@ context = tw.execute_command(["_get", "rc.context"])[0]
 
 if context:
     context_read = tw.execute_command(
-            ["_get", "rc.context." + context + ".read"]
-            )[0]
-    filterString += ' and ( ' + context_read + ')'
+        ["_get", "rc.context." + context + ".read"]
+    )[0]
+    filterString += " and ( " + context_read + ")"
 
 tasks = tw.tasks.filter(filterString)
 
@@ -176,17 +177,18 @@ tags = set([tag for task in tasks for tag in extract_tags_from(task)])
 virtualTime = {}
 tDict = {}
 _tasksTags = []
-for task in sorted(tasks, key=lambda d: d['urgency'], reverse=True):
+for task in sorted(tasks, key=lambda d: d["urgency"], reverse=True):
     _tags = set(tags_and_description(task))
     if _tags not in _tasksTags:
         _tasksTags.append(_tags)
-        tDict[task['id']] = task
-        virtualTime[task['id']] = exp(task['urgency'])
+        tDict[task["id"]] = task
+        virtualTime[task["id"]] = exp(task["urgency"])
 
 # Calcula executedTime por task
-executedTime = {tid: get_duration_on(
-    tags_and_description(tDict[tid])
-    ) for tid in virtualTime.keys()}
+executedTime = {
+    tid: get_duration_on(tags_and_description(tDict[tid]))
+    for tid in virtualTime.keys()
+}
 
 executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
 
@@ -206,14 +208,14 @@ totalVirtualTime = sum(virtualTime.values())
 # Calcula virtual time de cada tag
 virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
 sharesTag, executedSharesTag = get_shares(
-        executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
-        )
+    executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
+)
 
 
 tag_correction = {}
 for tag in sharesTag.keys():
     if executedSharesTag[tag] > sharesTag[tag]:
-        tag_correction[tag] = sharesTag[tag]/executedSharesTag[tag]
+        tag_correction[tag] = sharesTag[tag] / executedSharesTag[tag]
     else:
         tag_correction[tag] = 1
     if debug:
@@ -230,48 +232,49 @@ totalVirtualTime = sum(virtualTime.values())
 
 # Organiza por diferenças
 shares, executedShares = get_shares(
-        executedTime, virtualTime, totalExecutedTime, totalVirtualTime
-        )
+    executedTime, virtualTime, totalExecutedTime, totalVirtualTime
+)
 
-# Trata caso de apenas uma tarefa longa 
+# Trata caso de apenas uma tarefa longa
 # com mais prioridade do que as curtas
-if (1 in executedShares.values()):
+if 1 in executedShares.values():
     tid = list(executedShares.keys())[list(executedShares.values()).index(1)]
 
-    if sorted(tasks, key=lambda d: d['urgency'], reverse=True)[0]['id'] == tid:
+    if sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0]["id"] == tid:
         # Única tarefa feita é a de maior prioridade
         tags = tags_and_description(tDict[tid])
         _last_activity_time = last_activity_time(tags)
 
-        if (_last_activity_time < force_avoided_task_for_seconds):
+        if _last_activity_time < force_avoided_task_for_seconds:
             # Tarefa de maior prioridade não foi feita ininterruptamente
             # no último intervalo
             print("This is the only pending task started today")
-            print("Please keep doing it for",
-                  f"{int((
+            print(
+                "Please keep doing it for",
+                f"{int((
                     force_avoided_task_for_seconds-_last_activity_time
                   )/60)}min",
-                  "uninterruptly")
+                "uninterruptly",
+            )
             print_task(tDict[tid])
             quit()
 
-difference = {
-        key: shares[key]-executedShares[key]
-        for key in shares.keys()
-        }
+difference = {key: shares[key] - executedShares[key] for key in shares.keys()}
 
 if debug:
     for tid in sorted(difference, key=difference.get, reverse=True):
-        print(int(100*shares[tid]), int(100*executedShares[tid]),
-              int(executedTime[tid]*100/totalExecutedTime),
-              int(100*difference[tid]), tDict[tid])
+        print(
+            int(100 * shares[tid]),
+            int(100 * executedShares[tid]),
+            int(executedTime[tid] * 100 / totalExecutedTime),
+            int(100 * difference[tid]),
+            tDict[tid],
+        )
 
 tid = max(difference, key=difference.get)
 
 # Verifica se já não está há muito tempo nesta tarefa
-_last_activity_time = last_activity_time(
-        tags_and_description(tDict[tid])
-        )
+_last_activity_time = last_activity_time(tags_and_description(tDict[tid]))
 if _last_activity_time > force_switch_after_seconds and len(tasks) > 1:
     skiped_task = tDict[tid]
     print("skipping", skiped_task)
@@ -279,13 +282,16 @@ if _last_activity_time > force_switch_after_seconds and len(tasks) > 1:
     tid = max(difference, key=difference.get)
 
 
-print("Necessário: ",
-      int(shares[tid]*10000)/100, "%",
-      sep='')
-print("Executado:  ",
-      int(executedTime[tid]*10000/totalExecutedTime)/100
-      if totalExecutedTime > 0 else 0, "%",
-      sep='')
+print("Necessário: ", int(shares[tid] * 10000) / 100, "%", sep="")
+print(
+    "Executado:  ",
+    (
+        int(executedTime[tid] * 10000 / totalExecutedTime) / 100
+        if totalExecutedTime > 0
+        else 0
+    ),
+    "%",
+    sep="",
+)
 
 print_task(tDict[tid])
-
