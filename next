@@ -93,19 +93,20 @@ def last_activity_time(tags):
         return 0
 
 
-def get_tw_id(task):
-    if task["start"] is None:
-        return None
-
+def print_task(task):
     day = json.loads(subprocess.check_output(["timew", "export"]))
 
-    return min(
-        [
-            d["id"]
-            for d in day
-            if set(d["tags"]) == set(tags_and_description(task))
-        ]
-    )
+    if task["start"] is not None:
+        tw_id = min(
+                [
+                    d["id"]
+                    for d in day
+                    if set(d["tags"]) == set(tags_and_description(task))
+                    ]
+                )
+        print(f"Timewarrior id: @{tw_id}")
+
+    subprocess.run(["task", "ls", str(task["id"])])
 
 
 def get_duration_on(tags):
@@ -197,11 +198,7 @@ if totalTimeTags == 0 and totalExecutedTime == 0:
     print("No sampled time")
     print("Start by the most urgent task")
     tasks = tw.tasks.filter(filterString)
-    tw_id = get_tw_id(sorted(tasks, key=lambda d: d['urgency'], reverse=True)[0])
-    if tw_id is not None:
-        print(f"Timewarrior id: @{tw_id}")
-
-    subprocess.run(["task", "next", filterString, "limit:1"])
+    print_task(sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0])
     quit()
 
 totalVirtualTime = sum(virtualTime.values())
@@ -255,11 +252,7 @@ if (1 in executedShares.values()):
                     force_avoided_task_for_seconds-_last_activity_time
                   )/60)}min",
                   "uninterruptly")
-            tw_id = get_tw_id(tDict[tid])
-            if tw_id is not None:
-                print(f"Timewarrior id: @{tw_id}")
-
-            subprocess.run(["task", "ls", str(tid)])
+            print_task(tDict[tid])
             quit()
 
 difference = {
@@ -294,8 +287,5 @@ print("Executado:  ",
       if totalExecutedTime > 0 else 0, "%",
       sep='')
 
-tw_id = get_tw_id(tDict[tid])
-if tw_id is not None:
-    print(f"Timewarrior id: @{tw_id}")
+print_task(tDict[tid])
 
-subprocess.run(["task", "ls", str(tid)])
