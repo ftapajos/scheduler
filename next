@@ -96,14 +96,15 @@ def print_task(task):
     day = json.loads(subprocess.check_output(["timew", "export"]))
 
     if task["start"] is not None:
-        tw_id = min(
-            [
-                d["id"]
-                for d in day
-                if set(d["tags"]) == set(tags_and_description(task))
-            ]
-        )
-        print(f"Timewarrior id: @{tw_id}")
+        tw_ids = [
+            d["id"]
+            for d in day
+            if set(d["tags"]) == set(tags_and_description(task))
+        ]
+
+        if len(tw_ids) > 0:
+            tw_id = min(tw_ids)
+            print(f"Timewarrior id: @{tw_id}")
 
     subprocess.run(["task", "ls", str(task["id"])])
 
