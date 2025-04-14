@@ -1,6 +1,7 @@
 [project]
 name = "scheduler"
 version = "0.1.0"
+readme = "README.md"
 description = "Indicates which taskwarrior's task should be done, considering time spent on other tasks"
 authors = [
     {name = "Flávio Tapajós",email = "tapajos@outlook.com"}
