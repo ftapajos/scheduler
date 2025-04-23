@@ -9,11 +9,12 @@ authors = [
 license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.13"
 dependencies = [
-    "tasklib (>=2.5.1,<3.0.0)"
+    "tasklib (>=2.5.1,<3.0.0)",
+    "typer (>=0.15.2,<0.16.0)"
 ]
 
 [tool.poetry.scripts]
-next = "scheduler.main:next"
+next = "scheduler.main:app"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

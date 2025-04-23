@@ -5,7 +5,11 @@ from datetime import datetime, timedelta, timezone
 from math import exp
 from sys import argv
 
+import typer
 from tasklib import TaskWarrior
+
+app = typer.Typer()
+
 
 from .utils import (
     calculate_tag_sum,
@@ -23,6 +27,7 @@ force_avoided_task_for_seconds = 25 * 60
 force_switch_after_seconds = 25 * 60
 
 
+@app.command()
 def next():
     # Apply custom filters and restrict to unblocked and pending tasks
     tw = TaskWarrior()
