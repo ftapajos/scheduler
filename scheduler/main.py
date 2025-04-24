@@ -4,12 +4,11 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from math import exp
 from sys import argv
+from typing import List, Optional
 
 import typer
 from tasklib import TaskWarrior
-
-app = typer.Typer()
-
+from typing_extensions import Annotated
 
 from .utils import (
     calculate_tag_sum,
@@ -22,18 +21,28 @@ from .utils import (
     tags_and_description,
 )
 
+app = typer.Typer()
+
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
 force_switch_after_seconds = 25 * 60
 
 
-@app.command()
-def next():
+@app.callback(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+    invoke_without_command=True,
+)
+def next(
+    ctx: typer.Context, filters: Annotated[Optional[List[str]], typer.Argument()] = None
+):
     # Apply custom filters and restrict to unblocked and pending tasks
     tw = TaskWarrior()
-    filterString = " ".join(argv[1:])
+    if filters is not None:
+        filterString = " ".join(filters)
+    else:
+        filterString = ""
     if len(filterString) > 1:
-        filterString = "(" + filterString + ") "
+        filterString = "( " + filterString + " ) "
     else:
         filterString = ""
     filterString += "+UNBLOCKED and +PENDING"
