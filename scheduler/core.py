@@ -92,3 +92,13 @@ def get_times(tasks, tags):
     )
 
     return (virtualTime, executedTime), (sharesTag, executedSharesTag)
+
+
+def get_tag_correction(sharesTag, executedSharesTag):
+    tag_correction = {}
+    for tag in sharesTag.keys():
+        if executedSharesTag[tag] > sharesTag[tag]:
+            tag_correction[tag] = sharesTag[tag] / executedSharesTag[tag]
+        else:
+            tag_correction[tag] = 1
+    return tag_correction

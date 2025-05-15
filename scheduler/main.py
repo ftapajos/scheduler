@@ -7,7 +7,7 @@ import typer
 from tasklib import TaskWarrior
 from typing_extensions import Annotated
 
-from .core import get_tasks, get_times
+from .core import get_tag_correction, get_tasks, get_times
 from .utils import (
     extract_tags_from,
     get_shares,
@@ -55,12 +55,7 @@ def next(
 
     (virtualTime, executedTime), (sharesTag, executedSharesTag) = times
 
-    tag_correction = {}
-    for tag in sharesTag.keys():
-        if executedSharesTag[tag] > sharesTag[tag]:
-            tag_correction[tag] = sharesTag[tag] / executedSharesTag[tag]
-        else:
-            tag_correction[tag] = 1
+    tag_correction = get_tag_correction(sharesTag, executedSharesTag)
 
     # Calculate executed time for each tag
     tids = tDict.keys()
