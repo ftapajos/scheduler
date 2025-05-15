@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 
 import subprocess
-from datetime import datetime, timedelta, timezone
-from math import exp
-from sys import argv
 from typing import List, Optional
 
 import typer
 from tasklib import TaskWarrior
 from typing_extensions import Annotated
 
+from .core import get_tasks, get_times
 from .utils import (
-    calculate_tag_sum,
     extract_tags_from,
-    get_duration_on,
     get_shares,
-    get_total_time_tags,
     last_activity_time,
     print_task,
     tags_and_description,
@@ -35,75 +30,30 @@ force_switch_after_seconds = 25 * 60
 def next(
     ctx: typer.Context, filters: Annotated[Optional[List[str]], typer.Argument()] = None
 ):
+    tDict, filterString = get_tasks(filters)
+
     # Apply custom filters and restrict to unblocked and pending tasks
-    tw = TaskWarrior()
-    if filters is not None:
-        filterString = " ".join(filters)
-    else:
-        filterString = ""
-    if len(filterString) > 1:
-        filterString = "( " + filterString + " ) "
-    else:
-        filterString = ""
-    filterString += "+UNBLOCKED and +PENDING"
-
-    # Gets context's filter and apply it manually
-    context = tw.execute_command(["_get", "rc.context"])[0]
-
-    if context:
-        context_read = tw.execute_command(["_get", "rc.context." + context + ".read"])[
-            0
-        ]
-        filterString += " and ( " + context_read + ")"
-
-    tasks = tw.tasks.filter(filterString)
-
     # Check if there any tags
-    if len(tasks) <= 0:
+    if len(tDict) <= 0:
         print("Taskless")
         subprocess.run(["task", "ls", filterString])
         quit()
 
     # Get all tags
-    tags = set([tag for task in tasks for tag in extract_tags_from(task)])
+    tags = set([tag for task in tDict.values() for tag in extract_tags_from(task)])
 
-    # Calculate virtual times
-    virtualTime = {}
-    tDict = {}
-    _tasksTags = []
-    for task in sorted(tasks, key=lambda d: d["urgency"], reverse=True):
-        _tags = set(tags_and_description(task))
-        if _tags not in _tasksTags:
-            _tasksTags.append(_tags)
-            tDict[task["id"]] = task
-            virtualTime[task["id"]] = exp(task["urgency"])
-
-    # Calculate executed times
-    executedTime = {
-        tid: get_duration_on(tags_and_description(tDict[tid]))
-        for tid in virtualTime.keys()
-    }
-
-    executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
-
-    totalTimeTags = get_total_time_tags(executedTimeTag.keys())
-    totalExecutedTime = sum(executedTime.values())
+    times = get_times(tDict, tags)
 
     # Shows must urgent task, since there is no sample time
-    if totalTimeTags == 0 and totalExecutedTime == 0:
+    if times is None:
         print("No sampled time")
         print("Start by the most urgent task")
+        tw = TaskWarrior()
         tasks = tw.tasks.filter(filterString)
         print_task(sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0])
         quit()
 
-    totalVirtualTime = sum(virtualTime.values())
-
-    # Calculate virtual times for each tag
-    virtualTimeTag = calculate_tag_sum(tags, tDict, virtualTime)
-    sharesTag, executedSharesTag = get_shares(
-        executedTimeTag, virtualTimeTag, totalTimeTags, totalVirtualTime
-    )
+    (virtualTime, executedTime), (sharesTag, executedSharesTag) = times
 
     tag_correction = {}
     for tag in sharesTag.keys():
@@ -119,6 +69,7 @@ def next(
             virtualTime[tid] *= tag_correction[tag]
 
     totalVirtualTime = sum(virtualTime.values())
+    totalExecutedTime = sum(executedTime.values())
 
     # Calculate shares
     shares, executedShares = get_shares(
@@ -149,9 +100,9 @@ def next(
 
     tid = max(difference, key=difference.get)
 
-    # Verify if 
+    # Verify if
     _last_activity_time = last_activity_time(tags_and_description(tDict[tid]))
-    if _last_activity_time > force_switch_after_seconds and len(tasks) > 1:
+    if _last_activity_time > force_switch_after_seconds and len(tDict) > 1:
         skiped_task = tDict[tid]
         print("skipping", skiped_task)
         difference.pop(tid)

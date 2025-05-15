@@ -2,12 +2,7 @@
 
 import json
 import subprocess
-import time
-from datetime import UTC, datetime, timedelta, timezone
-from math import exp
-from sys import argv
-
-from tasklib import TaskWarrior
+from datetime import UTC, datetime, timezone
 
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
@@ -49,7 +44,11 @@ def calculate_tag_sum(tags, taskDictionary, dictionary):
     tids = taskDictionary.keys()
     for tag in tags:
         tagSum[tag] = sum(
-            [dictionary[tid] for tid in tids if tag in extract_tags_from(taskDictionary[tid])]
+            [
+                dictionary[tid]
+                for tid in tids
+                if tag in extract_tags_from(taskDictionary[tid])
+            ]
         )
     return tagSum
 
