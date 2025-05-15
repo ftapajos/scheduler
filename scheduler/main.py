@@ -75,7 +75,7 @@ def next(
     if 1 in executedShares.values():
         tid = list(executedShares.keys())[list(executedShares.values()).index(1)]
 
-        if sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0]["id"] == tid:
+        if sorted(tDict.values(), key=lambda d: d["urgency"], reverse=True)[0]["id"] == tid:
             tags = tags_and_description(tDict[tid])
             _last_activity_time = last_activity_time(tags)
 
