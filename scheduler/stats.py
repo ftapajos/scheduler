@@ -30,6 +30,7 @@ def tags(
     # Shows must urgent task, since there is no sample time
     if times is None:
         print("[bold red]Not enough sampled time[/bold red]")
+        quit()
 
     (virtualTime, executedTime), (sharesTag, executedSharesTag) = times
 
