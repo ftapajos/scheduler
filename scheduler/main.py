@@ -7,10 +7,9 @@ import typer
 from tasklib import TaskWarrior
 from typing_extensions import Annotated
 
-from .core import get_tag_correction, get_tasks, get_times
+from .core import get_difference, get_tasks, get_times
 from .utils import (
     extract_tags_from,
-    get_shares,
     last_activity_time,
     print_task,
     tags_and_description,
@@ -39,7 +38,6 @@ def next(
         subprocess.run(["task", "ls", filterString])
         quit()
 
-    # Get all tags
     tags = set([tag for task in tDict.values() for tag in extract_tags_from(task)])
 
     times = get_times(tDict, tags)
@@ -53,45 +51,28 @@ def next(
         print_task(sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0])
         quit()
 
-    (virtualTime, executedTime), (sharesTag, executedSharesTag) = times
-
-    tag_correction = get_tag_correction(sharesTag, executedSharesTag)
-
-    # Calculate executed time for each tag
-    tids = tDict.keys()
-    for tid in tids:
-        for tag in extract_tags_from(tDict[tid]):
-            virtualTime[tid] *= tag_correction[tag]
-
-    totalVirtualTime = sum(virtualTime.values())
-    totalExecutedTime = sum(executedTime.values())
-
-    # Calculate shares
-    shares, executedShares = get_shares(
-        executedTime, virtualTime, totalExecutedTime, totalVirtualTime
+    only_executed_task, difference, shares, executed_shares = get_difference(
+        times, tDict
     )
 
+    (virtualTime, executedTime), (sharesTag, executedSharesTag) = times
+
     # Problem of a urgent long task and short tags
-    if 1 in executedShares.values():
-        tid = list(executedShares.keys())[list(executedShares.values()).index(1)]
+    if only_executed_task is not None:
+        tags = tags_and_description(only_executed_task)
+        _last_activity_time = last_activity_time(tags)
 
-        if sorted(tDict.values(), key=lambda d: d["urgency"], reverse=True)[0]["id"] == tid:
-            tags = tags_and_description(tDict[tid])
-            _last_activity_time = last_activity_time(tags)
-
-            if _last_activity_time < force_avoided_task_for_seconds:
-                print("This is the only pending task started today")
-                print(
-                    "Please keep doing it for",
-                    f"{int((
+        if _last_activity_time < force_avoided_task_for_seconds:
+            print("This is the only pending task started today")
+            print(
+                "Please keep doing it for",
+                f"{int((
                         force_avoided_task_for_seconds-_last_activity_time
                       )/60)}min",
-                    "uninterruptly",
-                )
-                print_task(tDict[tid])
-                quit()
-
-    difference = {key: shares[key] - executedShares[key] for key in shares.keys()}
+                "uninterruptly",
+            )
+            print_task(only_executed_task)
+            quit()
 
     tid = max(difference, key=difference.get)
 
@@ -106,11 +87,7 @@ def next(
     print("Needed: ", int(shares[tid] * 10000) / 100, "%", sep="")
     print(
         "Executed:  ",
-        (
-            int(executedTime[tid] * 10000 / totalExecutedTime) / 100
-            if totalExecutedTime > 0
-            else 0
-        ),
+        int(executed_shares[tid] * 10000) / 100,
         "%",
         sep="",
     )
