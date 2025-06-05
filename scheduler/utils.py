@@ -53,12 +53,12 @@ def calculate_tag_sum(tags, taskDictionary, dictionary):
     return tagSum
 
 
-def get_time_tw(event):
-    start = datetime.strptime(event["start"], "%Y%m%dT%H%M%SZ").replace(
+def get_time_tw(tw_event):
+    start = datetime.strptime(tw_event["start"], "%Y%m%dT%H%M%SZ").replace(
         tzinfo=timezone.utc
     )
-    if "end" in event:
-        end = datetime.strptime(event["end"], "%Y%m%dT%H%M%SZ").replace(
+    if "end" in tw_event:
+        end = datetime.strptime(tw_event["end"], "%Y%m%dT%H%M%SZ").replace(
             tzinfo=timezone.utc
         )
     else:
@@ -66,21 +66,21 @@ def get_time_tw(event):
     return (end - start).total_seconds()
 
 
-def get_total_time_tags(tags):
-    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
+def get_total_time_tags(tw_tags, time_span=":day"):
+    day = json.loads(subprocess.check_output(["timew", "export", time_span]))
 
     total_time = 0
     for event in day:
-        if set(tags).intersection(set(event["tags"])):
+        if set(tw_tags).intersection(set(event["tags"])):
             total_time += get_time_tw(event)
     return total_time
 
 
-def last_activity_time(tags):
+def last_activity_time(tw_tags):
     day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
 
     last_activity = [event for event in day if event["id"] == 1][0]
-    if set(tags) == set(last_activity["tags"]):
+    if set(tw_tags) == set(last_activity["tags"]):
         return get_time_tw(last_activity)
     else:
         return 0
@@ -101,19 +101,19 @@ def print_task(task):
     subprocess.run(["task", "ls", str(task["id"])])
 
 
-def get_duration_on(tags):
-    if tagless in tags:
-        tags.remove(tagless)
+def get_duration_on(tw_tags, time_span=":day"):
+    if tagless in tw_tags:
+        tw_tags.remove(tagless)
 
-    if len(tags) <= 0:
+    if len(tw_tags) <= 0:
         return 0
 
-    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
+    day = json.loads(subprocess.check_output(["timew", "export", time_span]))
 
     total_time = 0
-    tags = set(tags)
+    tw_tags = set(tw_tags)
     for event in day:
-        if tags.intersection(set(event["tags"])) == tags:
+        if tw_tags.intersection(set(event["tags"])) == tw_tags:
             total_time += get_time_tw(event)
     return total_time
 
