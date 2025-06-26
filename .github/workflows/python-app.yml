@@ -1,0 +1,48 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.13"
+    - name: Install and configure Poetry
+      uses: snok/install-poetry@v1
+    - name: Install dependencies
+      run: |
+        poetry install --with test
+    - name: Check formatting
+      run: |
+        poetry run isort --check-only --profile black .
+        poetry run black . --check
+    - name: Install Taskwarrior 2.6.1
+      run: |
+        sudo apt-get install -y python-dev-is-python3 cmake build-essential libgnutls28-dev uuid-dev gnutls-bin chrpath libssl-dev libfontconfig1-dev
+        git clone https://github.com/GothenburgBitFactory/taskwarrior.git
+        cd taskwarrior
+        git checkout v2.6.1
+        cmake .
+        make
+        sudo make install
+        task --version
+        cd ../
+    - name: Test with pytest
+      run: |
+        poetry run pytest --cov=scheduler
