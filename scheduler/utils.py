@@ -1,8 +1,9 @@
-#!/usr/bin/env python
-
 import json
 import subprocess
 from datetime import UTC, datetime, timezone
+from typing import Dict, List
+
+from tasklib import Task
 
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
@@ -17,14 +18,7 @@ def extract_tags_from(task):
         tags.append(task["project"])
 
     if task["tags"] is not None:
-        if type(task["tags"]) is str:
-            # Usage of tasklib (e.g. in taskpirate) converts the tag list into
-            # a string
-            # If this is the case, convert it back into a list first
-            # See https://github.com/tbabej/taskpirate/issues/11
-            tags.extend(task["tags"].split(","))
-        else:
-            tags.extend(task["tags"])
+        tags.extend(task["tags"])
 
     if len(tags) == 0:
         tags.append(tagless)
@@ -39,13 +33,15 @@ def tags_and_description(task):
         return [task["description"]] + tags
 
 
-def calculate_tag_sum(tags, taskDictionary, dictionary):
+def calculate_tag_sum(
+    tags: List[str], taskDictionary: Dict[str, Task], virtualTimes: Dict[str, float]
+) -> Dict[str, float]:
     tagSum = {}
     tids = taskDictionary.keys()
     for tag in tags:
         tagSum[tag] = sum(
             [
-                dictionary[tid]
+                virtualTimes[tid]
                 for tid in tids
                 if tag in extract_tags_from(taskDictionary[tid])
             ]

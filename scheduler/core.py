@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from math import exp
 
 import typer
@@ -14,22 +12,19 @@ from .utils import (
     tags_and_description,
 )
 
-app = typer.Typer()
-
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
 force_switch_after_seconds = 25 * 60
 
 
-def get_tasks(filters):
+def get_tasks(filters, tw=TaskWarrior()):
     # Apply custom filters and restrict to unblocked and pending tasks
-    tw = TaskWarrior()
     if filters is not None:
         filterString = " ".join(filters)
     else:
         filterString = ""
     if len(filterString) > 1:
-        filterString = "( " + filterString + " ) "
+        filterString = f"( {filterString} ) and "
     else:
         filterString = ""
     filterString += "+UNBLOCKED and +PENDING"
@@ -41,7 +36,7 @@ def get_tasks(filters):
         context_read = tw.execute_command(["_get", "rc.context." + context + ".read"])[
             0
         ]
-        filterString += " and ( " + context_read + ")"
+        filterString += f" and ( {context_read} )"
 
     # If there are two identical tasks, get only the one with the
     # highest urgency
