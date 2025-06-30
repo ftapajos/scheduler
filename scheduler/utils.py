@@ -5,6 +5,8 @@ from typing import Dict, List
 
 from tasklib import Task
 
+from scheduler.timewarrior import timew_export
+
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
 force_switch_after_seconds = 25 * 60
@@ -62,8 +64,9 @@ def get_time_tw(tw_event):
     return (end - start).total_seconds()
 
 
-def get_total_time_tags(tw_tags, time_span=":day"):
-    day = json.loads(subprocess.check_output(["timew", "export", time_span]))
+def get_total_time_tags(tw_tags, time_span=":day", day=None):
+    if day is None:
+        day = timew_export(time_span)
 
     total_time = 0
     for event in day:
@@ -72,8 +75,9 @@ def get_total_time_tags(tw_tags, time_span=":day"):
     return total_time
 
 
-def last_activity_time(tw_tags):
-    day = json.loads(subprocess.check_output(["timew", "export", ":day"]))
+def last_activity_time(tw_tags, day=None):
+    if day is None:
+        day = timew_export(":day")
 
     last_activity = [event for event in day if event["id"] == 1][0]
     if set(tw_tags) == set(last_activity["tags"]):
@@ -83,7 +87,7 @@ def last_activity_time(tw_tags):
 
 
 def print_task(task):
-    day = json.loads(subprocess.check_output(["timew", "export"]))
+    day = timew_export()
 
     if task["start"] is not None:
         tw_ids = [
@@ -97,14 +101,15 @@ def print_task(task):
     subprocess.run(["task", "ls", str(task["id"])])
 
 
-def get_duration_on(tw_tags, time_span=":day"):
+def get_duration_on(tw_tags, time_span=":day", day=None):
     if tagless in tw_tags:
         tw_tags.remove(tagless)
 
     if len(tw_tags) <= 0:
         return 0
 
-    day = json.loads(subprocess.check_output(["timew", "export", time_span]))
+    if day is None:
+        day = timew_export(time_span)
 
     total_time = 0
     tw_tags = set(tw_tags)
