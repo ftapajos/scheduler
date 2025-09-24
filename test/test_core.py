@@ -2,7 +2,7 @@ import pytest
 from fixtures import get_taskwarrior
 from tasklib import Task
 
-from scheduler.core import get_tasks, get_times
+from taskwarrior_scheduler.core import get_tasks, get_times
 
 
 def test_get_tasks(get_taskwarrior):  # noqa

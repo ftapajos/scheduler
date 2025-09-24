@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from tasklib import Task
 
-from scheduler.timewarrior import timew_export
+from .timewarrior import timew_export
 
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60

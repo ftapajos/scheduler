@@ -6,7 +6,7 @@ import pytest
 from tasklib import Task, TaskWarrior
 from tasklib.lazy import LazyUUIDTaskSet
 
-from scheduler.core import get_tasks
+from taskwarrior_scheduler.core import get_tasks
 
 
 @pytest.fixture

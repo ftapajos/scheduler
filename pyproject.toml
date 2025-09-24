@@ -1,5 +1,5 @@
 [project]
-name = "scheduler"
+name = "taskwarrior_scheduler"
 version = "0.1.0"
 readme = "README.md"
 description = "Indicates which taskwarrior's task should be done, considering time spent on other tasks"
@@ -14,8 +14,8 @@ dependencies = [
 ]
 
 [tool.poetry.scripts]
-next = "scheduler.main:app"
-next-stats = "scheduler.stats:app"
+next = "taskwarrior_scheduler.main:app"
+next-stats = "taskwarrior_scheduler.stats:app"
 
 [tool.poetry.group.test.dependencies]
 pytest-cov = "^6.2.1"

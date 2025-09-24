@@ -1,7 +1,11 @@
 from fixtures import get_taskwarrior, tasks
 
-from scheduler.core import tagless
-from scheduler.utils import calculate_tag_sum, extract_tags_from, get_time_tw
+from taskwarrior_scheduler.core import tagless
+from taskwarrior_scheduler.utils import (
+    calculate_tag_sum,
+    extract_tags_from,
+    get_time_tw,
+)
 
 
 def test_extract_tags_from(tasks):  # noqa
