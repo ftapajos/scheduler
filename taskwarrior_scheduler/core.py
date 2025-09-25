@@ -2,6 +2,7 @@ from math import exp
 
 import typer
 from tasklib import TaskWarrior
+from tasklib.backends import TaskWarriorException
 
 from .utils import (
     calculate_tag_sum,
@@ -29,26 +30,31 @@ def get_tasks(filters, tw=TaskWarrior()):
         filterString = ""
     filterString += "+UNBLOCKED and +PENDING"
 
-    # Gets context's filter and apply it manually
-    context = tw.execute_command(["_get", "rc.context"])[0]
-
-    if context:
-        context_read = tw.execute_command(["_get", "rc.context." + context + ".read"])[
-            0
-        ]
-        filterString += f" and ( {context_read} )"
-
-    # If there are two identical tasks, get only the one with the
-    # highest urgency
     _tasksTags = []
     tasks = {}
-    for task in sorted(
-        tw.tasks.filter(filterString), key=lambda d: d["urgency"], reverse=True
-    ):
-        _tags = set(tags_and_description(task))
-        if _tags not in _tasksTags:
-            _tasksTags.append(_tags)
-            tasks[task["id"]] = task
+    try:
+        # Gets context's filter and apply it manually
+        context = tw.execute_command(["_get", "rc.context"])[0]
+
+        if context:
+            context_read = tw.execute_command(
+                ["_get", "rc.context." + context + ".read"]
+            )[0]
+            filterString += f" and ( {context_read} )"
+
+        # If there are two identical tasks, get only the one with the
+        # highest urgency
+        _tasksTags = []
+        tasks = {}
+        for task in sorted(
+            tw.tasks.filter(filterString), key=lambda d: d["urgency"], reverse=True
+        ):
+            _tags = set(tags_and_description(task))
+            if _tags not in _tasksTags:
+                _tasksTags.append(_tags)
+                tasks[task["id"]] = task
+    except TaskWarriorException as e:
+        print("Taskwarrior error:", e)
 
     return (
         tasks,
