@@ -4,6 +4,22 @@ Uses data from [taskwarrior](https://taskwarrior.org/) and [timewarrior](https:/
 
 # Installation
 
+## Dependencies
+
+The following dependencies are not python dependencies and must be installed through your system's package manager
+
+* [Taskwarrior](https://taskwarrior.org/)
+* [Timewarrior](https://timewarrior.net/)
+* [Hook for linking Taskwarrior to Timewarrior](https://timewarrior.net/docs/taskwarrior/)
+
+## Install with pip
+
+It is possible to install via pip by:
+
+```
+pip install taskwarrior-scheduler
+```
+
 # How to use it
 
 1. Run ``next`` to know on what task you should focus next
