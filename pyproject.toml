@@ -1,6 +1,6 @@
 [project]
 name = "taskwarrior_scheduler"
-version = "0.1.0"
+version = "0.1.1"
 readme = "README.md"
 description = "Indicates which taskwarrior's task should be done, considering time spent on other tasks"
 authors = [
