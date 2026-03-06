@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
 import subprocess
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 import typer
 from tasklib import TaskWarrior
-from typing_extensions import Annotated
 
 from .core import get_difference, get_tasks, get_times
 from .utils import (
