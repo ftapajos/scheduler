@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from tasklib import Task
@@ -165,3 +165,25 @@ def get_shares(executedTime, virtualTime, totalExecutedTime, totalVirtualTime):
     # Calculate shares
     shares = {key: virtualTime[key] / totalVirtualTime for key in keys}
     return (shares, executedShares)
+
+
+def calculate_skip_wait(task_tags: set, active_start: datetime) -> Optional[timedelta]:
+    """
+    Retorna 2*ΔT onde ΔT = active_start − fim da última execução anterior.
+    Retorna None se não houver execução anterior ou se ΔT > 1h.
+    """
+    all_entries = timew_export()
+    previous_ends = [
+        datetime.strptime(e["end"], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+        for e in all_entries
+        if "end" in e and set(e["tags"]) == task_tags
+    ]
+    if not previous_ends:
+        return None
+    last_end = max(previous_ends)
+    delta = active_start - last_end
+    if delta.total_seconds() <= 0:
+        return None
+    if delta.total_seconds() > 3600:
+        return None
+    return 2 * delta

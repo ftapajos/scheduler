@@ -17,6 +17,7 @@ dependencies = [
 next = "taskwarrior_scheduler.main:app"
 next-stats = "taskwarrior_scheduler.stats:app"
 fne = "taskwarrior_scheduler.fne:app"
+sne = "taskwarrior_scheduler.sne:app"
 
 [tool.poetry.group.test.dependencies]
 pytest-cov = "^6.2.1"
