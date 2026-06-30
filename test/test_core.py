@@ -1,7 +1,8 @@
+from unittest.mock import patch
+
 import pytest
 from fixtures import get_taskwarrior, tasks
 from tasklib import Task
-from unittest.mock import patch
 
 from taskwarrior_scheduler.core import get_tasks, get_times
 from taskwarrior_scheduler.utils import extract_tags_from

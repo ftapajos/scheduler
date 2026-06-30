@@ -62,6 +62,6 @@ def test_print_task_does_not_call_task_subprocess(tasks):
         with patch("subprocess.run") as mock_run:
             print_task(task)
             for call in mock_run.call_args_list:
-                assert call.args[0][0] != "task", (
-                    "print_task must not call the task subprocess"
-                )
+                assert (
+                    call.args[0][0] != "task"
+                ), "print_task must not call the task subprocess"
