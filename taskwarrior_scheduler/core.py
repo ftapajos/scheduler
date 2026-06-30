@@ -1,9 +1,11 @@
 from math import exp
+from typing import Any, Dict, List, Optional
 
 import typer
 from tasklib import TaskWarrior
 from tasklib.backends import TaskWarriorException
 
+from .timewarrior import timew_export
 from .utils import (
     calculate_tag_sum,
     extract_tags_from,
@@ -62,9 +64,12 @@ def get_tasks(filters, tw=TaskWarrior()):
     )
 
 
-def get_times(tasks, tags):
+def get_times(tasks, tags, day: Optional[List[Dict[str, Any]]] = None):
     if len(tasks) <= 0:
         return None
+
+    if day is None:
+        day = timew_export(":day")
 
     # Calculate virtual times
     virtualTime = {}
@@ -73,13 +78,12 @@ def get_times(tasks, tags):
 
     # Calculate executed times
     executedTime = {
-        tid: get_duration_on(tags_and_description(tasks[tid]))
+        tid: get_duration_on(tags_and_description(tasks[tid]), day=day)
         for tid in virtualTime.keys()
     }
 
-    executedTimeTag = {tag: get_duration_on([tag]) for tag in tags}
-
-    totalTimeTags = get_total_time_tags(executedTimeTag.keys())
+    executedTimeTag = {tag: get_duration_on([tag], day=day) for tag in tags}
+    totalTimeTags = get_total_time_tags(executedTimeTag.keys(), day=day)
     totalExecutedTime = sum(executedTime.values())
 
     if totalTimeTags == 0 and totalExecutedTime == 0:

@@ -4,9 +4,9 @@ import subprocess
 from typing import Annotated, List, Optional
 
 import typer
-from tasklib import TaskWarrior
 
 from .core import get_difference, get_tasks, get_times
+from .timewarrior import timew_export
 from .utils import (
     extract_tags_from,
     last_activity_time,
@@ -39,15 +39,14 @@ def next(
 
     tags = set([tag for task in tDict.values() for tag in extract_tags_from(task)])
 
-    times = get_times(tDict, tags)
+    day = timew_export(":day")
+    times = get_times(tDict, tags, day=day)
 
     # Shows must urgent task, since there is no sample time
     if times is None:
         print("No sampled time")
         print("Start by the most urgent task")
-        tw = TaskWarrior()
-        tasks = tw.tasks.filter(filterString)
-        print_task(sorted(tasks, key=lambda d: d["urgency"], reverse=True)[0])
+        print_task(sorted(tDict.values(), key=lambda d: d["urgency"], reverse=True)[0])
         quit()
 
     only_executed_task, difference, shares, executed_shares = get_difference(
@@ -59,7 +58,7 @@ def next(
     # Problem of a urgent long task and short tags
     if only_executed_task is not None:
         tags = tags_and_description(only_executed_task)
-        _last_activity_time = last_activity_time(tags)
+        _last_activity_time = last_activity_time(tags, day=day)
 
         if _last_activity_time < force_avoided_task_for_seconds:
             print("This is the only pending task started today")
@@ -76,7 +75,7 @@ def next(
     tid = max(difference, key=difference.get)
 
     # Verify if
-    _last_activity_time = last_activity_time(tags_and_description(tDict[tid]))
+    _last_activity_time = last_activity_time(tags_and_description(tDict[tid]), day=day)
     if _last_activity_time > force_switch_after_seconds and len(tDict) > 1:
         skiped_task = tDict[tid]
         print("skipping", skiped_task)

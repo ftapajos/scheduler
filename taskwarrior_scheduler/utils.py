@@ -1,11 +1,32 @@
 import json
-import subprocess
 from datetime import UTC, datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from tasklib import Task
 
 from .timewarrior import timew_export
+
+
+def _format_relative(dt: Optional[datetime]) -> str:
+    if dt is None:
+        return ""
+    delta = dt - datetime.now(UTC)
+    seconds = round(delta.total_seconds())
+    abs_s = abs(seconds)
+    if abs_s < 60:
+        rel = "now"
+    elif abs_s < 3600:
+        rel = f"{abs_s // 60}min"
+    elif abs_s < 86400:
+        rel = f"{abs_s // 3600}h"
+    elif abs_s < 7 * 86400:
+        rel = f"{abs_s // 86400}d"
+    elif abs_s < 30 * 86400:
+        rel = f"{abs_s // (7 * 86400)}w"
+    else:
+        rel = f"{abs_s // (30 * 86400)}mo"
+    return rel if seconds >= 0 else f"{rel} ago"
+
 
 tagless = "TAGLESSTASK"
 force_avoided_task_for_seconds = 25 * 60
@@ -86,19 +107,25 @@ def last_activity_time(tw_tags, day=None):
         return 0
 
 
-def print_task(task):
-    day = timew_export()
+def print_task(task: Task) -> None:
+    from rich.console import Console
+    from rich.table import Table
 
+    day = timew_export()
     if task["start"] is not None:
         tw_ids = [
             d["id"] for d in day if set(d["tags"]) == set(tags_and_description(task))
         ]
+        if tw_ids:
+            print(f"Timewarrior id: @{min(tw_ids)}")
 
-        if len(tw_ids) > 0:
-            tw_id = min(tw_ids)
-            print(f"Timewarrior id: @{tw_id}")
+    active = "*" if task["start"] is not None else " "
+    tags = " ".join(task["tags"] or [])
+    due = _format_relative(task["due"])
 
-    subprocess.run(["task", "ls", str(task["id"])])
+    table = Table("ID", "A", "Tags", "Due", "Description", box=None, show_header=True)
+    table.add_row(str(task["id"]), active, tags, due, task["description"])
+    Console().print(table)
 
 
 def get_duration_on(tw_tags, time_span=":day", day=None):

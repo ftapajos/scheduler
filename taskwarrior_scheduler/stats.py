@@ -9,6 +9,7 @@ from rich.table import Column, Table
 from typing_extensions import Annotated
 
 from .core import get_difference, get_tag_correction, get_tasks, get_times, tagless
+from .timewarrior import timew_export
 from .utils import extract_tags_from
 
 app = typer.Typer()
@@ -25,7 +26,8 @@ def tags(
     # Get all tags
     tags = set([tag for task in tasks.values() for tag in extract_tags_from(task)])
 
-    times = get_times(tasks, tags)
+    day = timew_export(":day")
+    times = get_times(tasks, tags, day=day)
 
     # Shows must urgent task, since there is no sample time
     if times is None:
@@ -54,7 +56,8 @@ def diff(
 
     tags = set([tag for task in tasks.values() for tag in extract_tags_from(task)])
 
-    times = get_times(tasks, tags)
+    day = timew_export(":day")
+    times = get_times(tasks, tags, day=day)
 
     _, difference, shares, executed_shares = get_difference(times, tasks)
 
