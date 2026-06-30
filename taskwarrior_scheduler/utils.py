@@ -1,6 +1,6 @@
 import json
 from datetime import UTC, datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from tasklib import Task
 
@@ -126,6 +126,11 @@ def print_task(task: Task) -> None:
     table = Table("ID", "A", "Tags", "Due", "Description", box=None, show_header=True)
     table.add_row(str(task["id"]), active, tags, due, task["description"])
     Console().print(table)
+
+
+def get_active_tw_entry(day: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    active = [event for event in day if "end" not in event]
+    return active[0] if active else None
 
 
 def get_duration_on(tw_tags, time_span=":day", day=None):

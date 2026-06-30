@@ -1,5 +1,5 @@
 from math import exp
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import typer
 from tasklib import TaskWarrior
@@ -12,6 +12,7 @@ from .utils import (
     get_duration_on,
     get_shares,
     get_total_time_tags,
+    last_activity_time,
     tags_and_description,
 )
 
@@ -98,6 +99,48 @@ def get_times(tasks, tags, day: Optional[List[Dict[str, Any]]] = None):
     )
 
     return (virtualTime, executedTime), (sharesTag, executedSharesTag)
+
+
+def find_next_task(
+    tDict: Dict[str, Any], day: List[Dict[str, Any]]
+) -> Tuple[Any, Optional[float], Optional[float]]:
+    tags = set([tag for task in tDict.values() for tag in extract_tags_from(task)])
+    times = get_times(tDict, tags, day=day)
+
+    if times is None:
+        print("No sampled time")
+        print("Start by the most urgent task")
+        most_urgent = sorted(tDict.values(), key=lambda d: d["urgency"], reverse=True)[
+            0
+        ]
+        return (most_urgent, None, None)
+
+    only_executed_task, difference, shares, executed_shares = get_difference(
+        times, tDict
+    )
+
+    if only_executed_task is not None:
+        _tags = tags_and_description(only_executed_task)
+        _last_activity_time = last_activity_time(_tags, day=day)
+
+        if _last_activity_time < force_avoided_task_for_seconds:
+            print("This is the only pending task started today")
+            print(
+                "Please keep doing it for",
+                f"{int((force_avoided_task_for_seconds - _last_activity_time) / 60)}min",
+                "uninterruptly",
+            )
+            return (only_executed_task, None, None)
+
+    tid = max(difference, key=difference.get)
+
+    _last_activity_time = last_activity_time(tags_and_description(tDict[tid]), day=day)
+    if _last_activity_time > force_switch_after_seconds and len(tDict) > 1:
+        print("skipping", tDict[tid])
+        difference.pop(tid)
+        tid = max(difference, key=difference.get)
+
+    return (tDict[tid], shares[tid], executed_shares[tid])
 
 
 def get_tag_correction(sharesTag, executedSharesTag):
